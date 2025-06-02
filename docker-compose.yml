@@ -1,0 +1,107 @@
+services:
+  postgres-users:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: eya1234
+      POSTGRES_DB: users_db
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  postgres-rentals:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: eya1234
+      POSTGRES_DB: rental_db
+    volumes:
+      - rentals_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  postgres-cars:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: eya1234
+      POSTGRES_DB: cars_db
+    volumes:
+      - cars_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.user
+    ports:
+      - "8001:8000"  # Expose user-service on port 8001
+    environment:
+      DATABASE_URL: postgresql://postgres:eya1234@postgres-users:5432/users_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres-users
+      - redis
+    networks:
+      - app-network
+
+  rental-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.rental
+    environment:
+      DATABASE_URL: postgresql://postgres:eya1234@postgres-rentals:5432/rentals_db
+    depends_on:
+      - postgres-rentals
+    networks:
+      - app-network
+
+  car-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.car
+    environment:
+      DATABASE_URL: postgresql://postgres:eya1234@postgres-cars:5432/cars_db
+    depends_on:
+      - postgres-cars
+    networks:
+      - app-network
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"  # Expose gateway-service on port 8000
+    depends_on:
+      - user-service
+      - rental-service
+      - car-service
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway-service
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    networks:
+      - app-network
+
+volumes:
+  users_db_data:
+  rentals_db_data:
+  cars_db_data:
+
+networks:
+  app-network:
+    driver: bridge

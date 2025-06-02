@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+# Copie le fichier Python correspondant au service "gateway"
+COPY gateway_service.py .
+
+# Installer les dépendances
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["uvicorn", "gateway_service:app", "--host", "0.0.0.0", "--port", "8000"]
